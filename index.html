@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customizable Board Book Creator</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const BoardBookCreator = () => {
+            const [character, setCharacter] = React.useState({
+                skinTone: '#FDBCB4',
+                hairStyle: 'short',
+                hairColor: '#8B4513',
+                hasGlasses: false,
+                glassesStyle: 'round',
+                hasEyePatch: false,
+                eyePatchSide: 'left',
+                mobility: 'walking',
+                hasLeftArm: true,
+                hasRightArm: true,
+                hasLeftLeg: true,
+                hasRightLeg: true,
+                eyeColor: '#654321',
+                outfit: 'casual',
+                outfitColor: '#4A90E2'
+            });
+
+            const [bookSettings, setBookSettings] = React.useState({
+                title: 'My Special Adventure',
+                characterName: 'Alex',
+                theme: 'adventure',
+                backgroundColor: '#87CEEB'
+            });
+
+            const [currentPage, setCurrentPage] = React.useState('customize');
+
+            // Color palettes
+            const skinTones = [
+                '#FDBCB4', '#F1C27D', '#E0AC69', '#C68642', 
+                '#8D5524', '#975F36', '#6B4E3D', '#4A3A2A'
+            ];
+
+            const hairColors = [
+                '#000000', '#2C1B18', '#8B4513', '#D2691E',
+                '#DAA520', '#B8860B', '#CD853F', '#DEB887',
+                '#F0E68C', '#98FB98', '#FF69B4', '#9370DB'
+            ];
+
+            const outfitColors = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+                '#FECA57', '#FF9FF3', '#54A0FF', '#5F27CD'
+            ];
+
+            // Color conversion utilities
+            const hexToHsl = (hex) => {
+                const r = parseInt(hex.slice(1, 3), 16) / 255;
+                const g = parseInt(hex.slice(3, 5), 16) / 255;
+                const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+
+                if (max === min) {
+                    h = s = 0;
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+
+                return {
+                    h: Math.round(h * 360),
+                    s: Math.round(s * 100),
+                    l: Math.round(l * 100)
+                };
+            };
+
+            const hslToHex = (h, s, l) => {
+                l /= 100;
+                const a = s * Math.min(l, 1 - l) / 100;
+                const f = n => {
+                    const k = (n + h / 30) % 12;
+                    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                    return Math.round(255 * color).toString(16).padStart(2, '0');
+                };
+                return `#${f(0)}${f(8)}${f(4)}`;
+            };
+            const updateCharacter = (property, value) => {
+                setCharacter(prev => ({ ...prev, [property]: value }));
+            };
+
+            const updateBookSettings = (property, value) => {
+                setBookSettings(prev => ({ ...prev, [property]: value }));
+            };
+
+            // Character SVG Component
+            const CharacterSVG = () => {
+                const { skinTone, hairStyle, hairColor, hasGlasses, glassesStyle, 
+                       hasEyePatch, eyePatchSide, mobility, hasLeftArm, hasRightArm, 
+                       hasLeftLeg, hasRightLeg, eyeColor, outfit, outfitColor } = character;
+
+                return (
+                    <svg viewBox="0 0 200 300" className="w-full h-full">
+                        {/* Background */}
+                        <rect width="200" height="300" fill={bookSettings.backgroundColor} />
+                        
+                        {/* Wheelchair (if needed) */}
+                        {mobility === 'wheelchair' && (
+                            <g>
+                                {/* Wheelchair frame */}
+                                <rect x="60" y="200" width="80" height="60" fill="#C0C0C0" rx="5" />
+                                {/* Large wheels */}
+                                <circle cx="75" cy="245" r="20" fill="none" stroke="#666" strokeWidth="3" />
+                                <circle cx="145" cy="245" r="20" fill="none" stroke="#666" strokeWidth="3" />
+                                {/* Small front wheels */}
+                                <circle cx="65" cy="220" r="8" fill="#666" />
+                                <circle cx="155" cy="220" r="8" fill="#666" />
+                                {/* Spokes */}
+                                <g stroke="#666" strokeWidth="1">
+                                    <line x1="75" y1="225" x2="75" y2="265" />
+                                    <line x1="55" y1="245" x2="95" y2="245" />
+                                    <line x1="145" y1="225" x2="145" y2="265" />
+                                    <line x1="125" y1="245" x2="165" y2="245" />
+                                </g>
+                            </g>
+                        )}
+
+                        {/* Body */}
+                        <ellipse cx="100" cy={mobility === 'wheelchair' ? '180' : '200'} 
+                                rx="30" ry="40" fill={outfitColor} />
+
+                        {/* Arms */}
+                        {hasLeftArm && (
+                            <g>
+                                <ellipse cx="70" cy={mobility === 'wheelchair' ? '170' : '190'} 
+                                        rx="8" ry="25" fill={skinTone} />
+                                <circle cx="70" cy={mobility === 'wheelchair' ? '195' : '215'} 
+                                       r="6" fill={skinTone} />
+                            </g>
+                        )}
+                        {hasRightArm && (
+                            <g>
+                                <ellipse cx="130" cy={mobility === 'wheelchair' ? '170' : '190'} 
+                                        rx="8" ry="25" fill={skinTone} />
+                                <circle cx="130" cy={mobility === 'wheelchair' ? '195' : '215'} 
+                                       r="6" fill={skinTone} />
+                            </g>
+                        )}
+
+                        {/* Legs (only if walking) */}
+                        {mobility === 'walking' && (
+                            <>
+                                {hasLeftLeg && (
+                                    <g>
+                                        <ellipse cx="85" cy="250" rx="8" ry="30" fill={outfitColor} />
+                                        <ellipse cx="85" cy="280" rx="10" ry="8" fill="#8B4513" />
+                                    </g>
+                                )}
+                                {hasRightLeg && (
+                                    <g>
+                                        <ellipse cx="115" cy="250" rx="8" ry="30" fill={outfitColor} />
+                                        <ellipse cx="115" cy="280" rx="10" ry="8" fill="#8B4513" />
+                                    </g>
+                                )}
+                            </>
+                        )}
+
+                        {/* Head */}
+                        <circle cx="100" cy="120" r="35" fill={skinTone} />
+
+                        {/* Hair */}
+                        <g fill={hairColor}>
+                            {hairStyle === 'short' && (
+                                <path d="M 65 105 Q 100 85 135 105 Q 135 95 100 90 Q 65 95 65 105" />
+                            )}
+                            {hairStyle === 'long' && (
+                                <g>
+                                    <path d="M 65 105 Q 100 85 135 105 Q 135 95 100 90 Q 65 95 65 105" />
+                                    <ellipse cx="70" cy="130" rx="8" ry="20" />
+                                    <ellipse cx="130" cy="130" rx="8" ry="20" />
+                                </g>
+                            )}
+                            {hairStyle === 'curly' && (
+                                <g>
+                                    <circle cx="80" cy="95" r="8" />
+                                    <circle cx="100" cy="90" r="10" />
+                                    <circle cx="120" cy="95" r="8" />
+                                    <circle cx="75" cy="110" r="6" />
+                                    <circle cx="125" cy="110" r="6" />
+                                </g>
+                            )}
+                            {hairStyle === 'ponytail' && (
+                                <g>
+                                    <path d="M 65 105 Q 100 85 135 105 Q 135 95 100 90 Q 65 95 65 105" />
+                                    <ellipse cx="140" cy="120" rx="6" ry="15" />
+                                </g>
+                            )}
+                            {hairStyle === 'bald' && null}
+                        </g>
+
+                        {/* Eyes */}
+                        <circle cx="90" cy="115" r="4" fill="white" />
+                        <circle cx="110" cy="115" r="4" fill="white" />
+                        <circle cx="90" cy="115" r="2" fill={eyeColor} />
+                        <circle cx="110" cy="115" r="2" fill={eyeColor} />
+
+                        {/* Eye patch */}
+                        {hasEyePatch && (
+                            <g>
+                                <circle cx={eyePatchSide === 'left' ? '90' : '110'} cy="115" r="8" fill="#000" />
+                                <path d={eyePatchSide === 'left' 
+                                    ? "M 82 107 Q 100 100 118 107" 
+                                    : "M 82 107 Q 100 100 118 107"} 
+                                    stroke="#000" strokeWidth="2" fill="none" />
+                            </g>
+                        )}
+
+                        {/* Glasses */}
+                        {hasGlasses && (
+                            <g stroke="#333" strokeWidth="2" fill="none">
+                                {glassesStyle === 'round' && (
+                                    <>
+                                        <circle cx="90" cy="115" r="10" />
+                                        <circle cx="110" cy="115" r="10" />
+                                        <line x1="100" y1="115" x2="100" y2="115" strokeWidth="3" />
+                                    </>
+                                )}
+                                {glassesStyle === 'square' && (
+                                    <>
+                                        <rect x="80" y="105" width="20" height="20" rx="2" />
+                                        <rect x="100" y="105" width="20" height="20" rx="2" />
+                                    </>
+                                )}
+                            </g>
+                        )}
+
+                        {/* Nose */}
+                        <ellipse cx="100" cy="125" rx="2" ry="3" fill={skinTone} stroke={skinTone} strokeWidth="1" />
+
+                        {/* Mouth */}
+                        <path d="M 95 135 Q 100 140 105 135" stroke="#D2691E" strokeWidth="2" fill="none" />
+
+                        {/* Character name */}
+                        <text x="100" y="290" textAnchor="middle" fill="#333" fontSize="12" fontFamily="Arial">
+                            {bookSettings.characterName}
+                        </text>
+                    </svg>
+                );
+            };
+
+            // Book preview component
+            const BookPreview = () => (
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md">
+                    <h3 className="text-xl font-bold text-center mb-4" style={{color: character.hairColor}}>
+                        {bookSettings.title}
+                    </h3>
+                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+                        <CharacterSVG />
+                    </div>
+                    <p className="text-center text-gray-700">
+                        Meet {bookSettings.characterName}! Ready for an amazing {bookSettings.theme}!
+                    </p>
+                </div>
+            );
+
+            // Export functionality
+            const exportCharacter = () => {
+                const svgElement = document.querySelector('svg');
+                const svgData = new XMLSerializer().serializeToString(svgElement);
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                canvas.width = 800;
+                canvas.height = 1200;
+                
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, 800, 1200);
+                    const pngFile = canvas.toDataURL('image/png');
+                    
+                    const downloadLink = document.createElement('a');
+                    downloadLink.download = `${bookSettings.characterName}_character.png`;
+                    downloadLink.href = pngFile;
+                    downloadLink.click();
+                };
+                
+                img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+            };
+
+            const saveConfiguration = () => {
+                const config = {
+                    character,
+                    bookSettings,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(config, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${bookSettings.characterName}_config.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
+            if (currentPage === 'preview') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-pink-100 p-6">
+                        <div className="max-w-6xl mx-auto">
+                            <div className="flex justify-between items-center mb-8">
+                                <h1 className="text-3xl font-bold text-gray-800">Book Preview</h1>
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => setCurrentPage('customize')}
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                                    >
+                                        ← Back to Customize
+                                    </button>
+                                    <button 
+                                        onClick={exportCharacter}
+                                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                                    >
+                                        📥 Export Image
+                                    </button>
+                                    <button 
+                                        onClick={saveConfiguration}
+                                        className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+                                    >
+                                        💾 Save Config
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="grid lg:grid-cols-2 gap-8">
+                                <div className="flex justify-center">
+                                    <BookPreview />
+                                </div>
+                                
+                                <div className="bg-white rounded-lg shadow-lg p-6">
+                                    <h3 className="text-xl font-bold mb-4">Character Details</h3>
+                                    <div className="space-y-3 text-sm">
+                                        <div><strong>Name:</strong> {bookSettings.characterName}</div>
+                                        <div><strong>Book Title:</strong> {bookSettings.title}</div>
+                                        <div><strong>Hair Style:</strong> {character.hairStyle}</div>
+                                        <div><strong>Mobility:</strong> {character.mobility}</div>
+                                        <div><strong>Accessories:</strong> 
+                                            {character.hasGlasses && ' Glasses'}
+                                            {character.hasEyePatch && ' Eye Patch'}
+                                            {!character.hasGlasses && !character.hasEyePatch && ' None'}
+                                        </div>
+                                        <div><strong>Limbs:</strong>
+                                            {!character.hasLeftArm && ' Missing left arm'}
+                                            {!character.hasRightArm && ' Missing right arm'}
+                                            {!character.hasLeftLeg && ' Missing left leg'}
+                                            {!character.hasRightLeg && ' Missing right leg'}
+                                            {character.hasLeftArm && character.hasRightArm && character.hasLeftLeg && character.hasRightLeg && ' All present'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-6">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl font-bold text-gray-800 mb-2">Customizable Board Book Creator</h1>
+                            <p className="text-xl text-gray-600">Create inclusive, personalized stories for every child</p>
+                        </div>
+
+                        <div className="grid lg:grid-cols-2 gap-8">
+                            {/* Character Preview */}
+                            <div className="bg-white rounded-lg shadow-lg p-6">
+                                <h2 className="text-2xl font-bold mb-4 text-center">Character Preview</h2>
+                                <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden mb-4">
+                                    <CharacterSVG />
+                                </div>
+                                <div className="flex justify-center">
+                                    <button 
+                                        onClick={() => setCurrentPage('preview')}
+                                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium"
+                                    >
+                                        📖 Preview Book
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Customization Panel */}
+                            <div className="bg-white rounded-lg shadow-lg p-6 overflow-y-auto max-h-screen">
+                                <h2 className="text-2xl font-bold mb-6">Customize Your Character</h2>
+
+                                {/* Book Settings */}
+                                <div className="mb-6 p-4 bg-purple-50 rounded-lg">
+                                    <h3 className="text-lg font-semibold mb-3">📚 Book Settings</h3>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Character Name</label>
+                                            <input 
+                                                type="text" 
+                                                value={bookSettings.characterName}
+                                                onChange={(e) => updateBookSettings('characterName', e.target.value)}
+                                                className="w-full border border-gray-300 rounded px-3 py-2"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Book Title</label>
+                                            <input 
+                                                type="text" 
+                                                value={bookSettings.title}
+                                                onChange={(e) => updateBookSettings('title', e.target.value)}
+                                                className="w-full border border-gray-300 rounded px-3 py-2"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Skin Tone */}
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-semibold mb-3">🎨 Skin Tone</h3>
+                                    <div className="space-y-4">
+                                        {/* Color Picker */}
+                                        <div className="flex items-center gap-3">
+                                            <input 
+                                                type="color" 
+                                                value={character.skinTone}
+                                                onChange={(e) => updateCharacter('skinTone', e.target.value)}
+                                                className="w-12 h-12 rounded border-2 border-gray-300 cursor-pointer"
+                                            />
+                                            <span className="text-sm text-gray-600">Custom color picker</span>
+                                        </div>
+                                        
+                                        {/* Quick preset buttons */}
+                                        <div>
+                                            <p className="text-sm text-gray-600 mb-2">Quick presets:</p>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {skinTones.map((tone, index) => (
+                                                    <button
+                                                        key={index}
+                                                        onClick={() => updateCharacter('skinTone', tone)}
+                                                        className={`w-10 h-10 rounded-full border-2 hover:border-blue-400 transition-colors ${
+                                                            character.skinTone === tone ? 'border-blue-500 border-4' : 'border-gray-300'
+                                                        }`}
+                                                        style={{ backgroundColor: tone }}
+                                                        title="Click for preset skin tone"
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Hair */}
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-semibold mb-3">💇 Hair</h3>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-2">Hair Style</label>
+                                            <select 
+                                                value={character.hairStyle}
+                                                onChange={(e) => updateCharacter('hairStyle', e.target.value)}
+                                                className="w-full border border-gray-300 rounded px-3 py-2"
+                                            >
+                                                <option value="short">Short</option>
+                                                <option value="long">Long</option>
+                                                <option value="curly">Curly</option>
+                                                <option value="ponytail">Ponytail</option>
+                                                <option value="bald">Bald</option>
+                                            </select>
+                                        </div>
+                                        {character.hairStyle !== 'bald' && (
+                                            <div className="space-y-4">
+                                                <label className="block text-sm font-medium">Hair Color</label>
+                                                
+                                                {/* Color Picker */}
+                                                <div className="flex items-center gap-3">
+                                                    <input 
+                                                        type="color" 
+                                                        value={character.hairColor}
+                                                        onChange={(e) => updateCharacter('hairColor', e.target.value)}
+                                                        className="w-12 h-12 rounded border-2 border-gray-300 cursor-pointer"
+                                                    />
+                                                    <span className="text-sm text-gray-600">Custom hair color</span>
+                                                </div>
+
+                                                {/* HSL Sliders for more precise control */}
+                                                <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                                                    <p className="text-sm font-medium text-gray-700">Fine-tune with sliders:</p>
+                                                    
+                                                    {/* Hue Slider */}
+                                                    <div>
+                                                        <label className="block text-xs text-gray-600 mb-1">Hue (Color)</label>
+                                                        <input 
+                                                            type="range" 
+                                                            min="0" 
+                                                            max="360" 
+                                                            value={hexToHsl(character.hairColor).h}
+                                                            onChange={(e) => {
+                                                                const hsl = hexToHsl(character.hairColor);
+                                                                const newColor = hslToHex(parseInt(e.target.value), hsl.s, hsl.l);
+                                                                updateCharacter('hairColor', newColor);
+                                                            }}
+                                                            className="w-full"
+                                                            style={{
+                                                                background: `linear-gradient(to right, 
+                                                                    hsl(0, 70%, 50%), hsl(60, 70%, 50%), hsl(120, 70%, 50%), 
+                                                                    hsl(180, 70%, 50%), hsl(240, 70%, 50%), hsl(300, 70%, 50%), hsl(360, 70%, 50%))`
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    {/* Saturation Slider */}
+                                                    <div>
+                                                        <label className="block text-xs text-gray-600 mb-1">Saturation (Intensity)</label>
+                                                        <input 
+                                                            type="range" 
+                                                            min="0" 
+                                                            max="100" 
+                                                            value={hexToHsl(character.hairColor).s}
+                                                            onChange={(e) => {
+                                                                const hsl = hexToHsl(character.hairColor);
+                                                                const newColor = hslToHex(hsl.h, parseInt(e.target.value), hsl.l);
+                                                                updateCharacter('hairColor', newColor);
+                                                            }}
+                                                            className="w-full"
+                                                        />
+                                                    </div>
+
+                                                    {/* Lightness Slider */}
+                                                    <div>
+                                                        <label className="block text-xs text-gray-600 mb-1">Lightness (Brightness)</label>
+                                                        <input 
+                                                            type="range" 
+                                                            min="10" 
+                                                            max="90" 
+                                                            value={hexToHsl(character.hairColor).l}
+                                                            onChange={(e) => {
+                                                                const hsl = hexToHsl(character.hairColor);
+                                                                const newColor = hslToHex(hsl.h, hsl.s, parseInt(e.target.value));
+                                                                updateCharacter('hairColor', newColor);
+                                                            }}
+                                                            className="w-full"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Quick preset buttons */}
+                                                <div>
+                                                    <p className="text-sm text-gray-600 mb-2">Quick presets:</p>
+                                                    <div className="grid grid-cols-6 gap-2">
+                                                        {hairColors.map((color, index) => (
+                                                            <button
+                                                                key={index}
+                                                                onClick={() => updateCharacter('hairColor', color)}
+                                                                className={`w-8 h-8 rounded-full border-2 hover:border-blue-400 transition-colors ${
+                                                                    character.hairColor === color ? 'border-blue-500 border-4' : 'border-gray-300'
+                                                                }`}
+                                                                style={{ backgroundColor: color }}
+                                                                title="Click for preset hair color"
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Glasses */}
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-semibold mb-3">👓 Glasses</h3>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={character.hasGlasses}
+                                                onChange={(e) => updateCharacter('hasGlasses', e.target.checked)}
+                                                className="mr-2"
+                                            />
+                                            Wears Glasses
+                                        </label>
+                                        {character.hasGlasses && (
+                                            <select 
+                                                value={character.glassesStyle}
+                                                onChange={(e) => updateCharacter('glassesStyle', e.target.value)}
+                                                className="w-full border border-gray-300 rounded px-3 py-2"
+                                            >
+                                                <option value="round">Round</option>
+                                                <option value="square">Square</option>
+                                            </select>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Eye Patch */}
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-semibold mb-3">🏴‍☠️ Eye Patch</h3>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={character.hasEyePatch}
+                                                onChange={(e) => updateCharacter('hasEyePatch', e.target.checked)}
+                                                className="mr-2"
+                                            />
+                                            Has Eye Patch
+                                        </label>
+                                        {character.hasEyePatch && (
+                                            <select 
+                                                value={character.eyePatchSide}
+                                                onChange={(e) => updateCharacter('eyePatchSide', e.target.value)}
+                                                className="w-full border border-gray-300 rounded px-3 py-2"
+                                            >
+                                                <option value="left">Left Eye</option>
+                                                <option value="right">Right Eye</option>
+                                            </select>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Mobility */}
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-semibold mb-3">♿ Mobility</h3>
+                                    <select 
+                                        value={character.mobility}
+                                        onChange={(e) => updateCharacter('mobility', e.target.value)}
+                                        className="w-full border border-gray-300 rounded px-3 py-2"
+                                    >
+                                        <option value="walking">Walking</option>
+                                        <option value="wheelchair">Wheelchair</option>
+                                    </select>
+                                </div>
+
+                                {/* Limbs */}
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-semibold mb-3">🦾 Limbs</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <label className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={character.hasLeftArm}
+                                                onChange={(e) => updateCharacter('hasLeftArm', e.target.checked)}
+                                                className="mr-2"
+                                            />
+                                            Left Arm
+                                        </label>
+                                        <label className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={character.hasRightArm}
+                                                onChange={(e) => updateCharacter('hasRightArm', e.target.checked)}
+                                                className="mr-2"
+                                            />
+                                            Right Arm
+                                        </label>
+                                        <label className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={character.hasLeftLeg}
+                                                onChange={(e) => updateCharacter('hasLeftLeg', e.target.checked)}
+                                                className="mr-2"
+                                            />
+                                            Left Leg
+                                        </label>
+                                        <label className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={character.hasRightLeg}
+                                                onChange={(e) => updateCharacter('hasRightLeg', e.target.checked)}
+                                                className="mr-2"
+                                            />
+                                            Right Leg
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Outfit */}
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-semibold mb-3">👕 Outfit Color</h3>
+                                    <div className="space-y-4">
+                                        {/* Color Picker */}
+                                        <div className="flex items-center gap-3">
+                                            <input 
+                                                type="color" 
+                                                value={character.outfitColor}
+                                                onChange={(e) => updateCharacter('outfitColor', e.target.value)}
+                                                className="w-12 h-12 rounded border-2 border-gray-300 cursor-pointer"
+                                            />
+                                            <span className="text-sm text-gray-600">Custom outfit color</span>
+                                        </div>
+                                        
+                                        {/* Quick preset buttons */}
+                                        <div>
+                                            <p className="text-sm text-gray-600 mb-2">Quick presets:</p>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {outfitColors.map((color, index) => (
+                                                    <button
+                                                        key={index}
+                                                        onClick={() => updateCharacter('outfitColor', color)}
+                                                        className={`w-10 h-10 rounded-full border-2 hover:border-blue-400 transition-colors ${
+                                                            character.outfitColor === color ? 'border-blue-500 border-4' : 'border-gray-300'
+                                                        }`}
+                                                        style={{ backgroundColor: color }}
+                                                        title="Click for preset outfit color"
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(BoardBookCreator));
+    </script>
+</body>
+</html>
